@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | SmartDocShield</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        .dashboard-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: 80px;
+            /* Account for navbar */
+            position: relative;
+            z-index: 1;
+        }
+
+        .dashboard-header {
+            padding: 40px 10%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(6, 6, 14, 0.8), rgba(6, 6, 14, 0));
+        }
+
+        .dashboard-title h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-title p {
+            color: rgba(200, 210, 240, 0.6);
+            font-size: 1.1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            padding: 40px 10%;
+        }
+
+        .dashboard-card {
+            background: rgba(12, 12, 30, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);
+        }
+
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 0%, rgba(0, 212, 255, 0.1), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .dashboard-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: var(--neon-blue);
+            margin-bottom: 5px;
+        }
+
+        .card-label {
+            color: rgba(200, 210, 240, 0.6);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .recent-activity {
+            padding: 0 10% 60px;
+        }
+
+        .activity-panel {
+            background: rgba(12, 12, 30, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+        }
+
+        .activity-panel h2 {
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(180, 76, 255, 0.1);
+            color: var(--neon-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+        }
+
+        .activity-details {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .activity-time {
+            font-size: 0.85rem;
+            color: rgba(200, 210, 240, 0.5);
+        }
+
+        .activity-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .logout-btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            background: rgba(255, 51, 119, 0.1);
+            color: #ff3377;
+            border: 1px solid rgba(255, 51, 119, 0.2);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 51, 119, 0.2);
+            box-shadow: 0 0 15px rgba(255, 51, 119, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Canvas -->
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <a href="index.html" class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <defs>
+                    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00d4ff" />
+                        <stop offset="100%" stop-color="#b44cff" />
+                    </linearGradient>
+                </defs>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="M9 12l2 2 4-4" />
+            </svg>
+            <span class="logo-text">Smart<span>DocShield</span></span>
+        </a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="#" class="nav-link active">Dashboard</a>
+            <a href="index.html" class="logout-btn">Sign Out</a>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard Content -->
+    <main class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="dashboard-title">
+                <h1>Welcome Back, Test User</h1>
+                <p>Overview of your protected document intelligence.</p>
+            </div>
+            <div>
+                <a href="index.html#upload" class="primary-btn glow-effect">
+                    <span class="btn-glow"></span>
+                    <span>Upload New Document</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="stats-grid">
+            <div class="dashboard-card">
+                <div class="card-icon" style="color: #00d4ff; background: rgba(0, 212, 255, 0.1);">📄</div>
+                <div class="card-value">1,204</div>
+                <div class="card-label">Documents Processed</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-icon" style="color: #b44cff; background: rgba(180, 76, 255, 0.1);">🛡️</div>
+                <div class="card-value">15,482</div>
+                <div class="card-label">PII Entities Redacted</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-icon" style="color: #00ff88; background: rgba(0, 255, 136, 0.1);">⚡</div>
+                <div class="card-value">99.8%</div>
+                <div class="card-label">OCR Accuracy Score</div>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-icon" style="color: #ff3377; background: rgba(255, 51, 119, 0.1);">🔒</div>
+                <div class="card-value">AES-256</div>
+                <div class="card-label">Encryption Level</div>
+            </div>
+        </section>
+
+        <section class="recent-activity">
+            <div class="activity-panel">
+                <h2>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="color: var(--neon-blue);">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                    Recent Processing Activity
+                </h2>
+                <ul class="activity-list">
+                    <li class="activity-item">
+                        <div class="activity-icon" style="color: #00d4ff; background: rgba(0, 212, 255, 0.1);">Q1</div>
+                        <div class="activity-details">
+                            <div class="activity-title">Q1_Financial_Report.pdf</div>
+                            <div class="activity-time">Processed 2 minutes ago • 12 PII fields redacted</div>
+                        </div>
+                        <div class="activity-status status-success">Secured</div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-icon" style="color: #b44cff; background: rgba(180, 76, 255, 0.1);">HR</div>
+                        <div class="activity-details">
+                            <div class="activity-title">Employee_Contracts_Batch.zip</div>
+                            <div class="activity-time">Processed 1 hour ago • 45 documents analyzed</div>
+                        </div>
+                        <div class="activity-status status-success">Secured</div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-icon" style="color: #00ff88; background: rgba(0, 255, 136, 0.1);">ID</div>
+                        <div class="activity-details">
+                            <div class="activity-title">Passport_Scan_ClientA.jpg</div>
+                            <div class="activity-time">Processed 3 hours ago • Name and SSN masked</div>
+                        </div>
+                        <div class="activity-status status-success">Secured</div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- Minimal script for particle background on dashboard -->
+    <script>
+        // Particle System
+        function initParticles() {
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2 + 0.5;
+                    this.speedX = (Math.random() - 0.5) * 0.2;
+                    this.speedY = (Math.random() - 0.5) * 0.2;
+
+                    const colors = [
+                        { r: 0, g: 212, b: 255 },
+                        { r: 180, g: 76, b: 255 }
+                    ];
+                    this.color = colors[Math.floor(Math.random() * colors.length)];
+                    this.opacity = Math.random() * 0.3 + 0.1;
+                }
+
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+
+                    if (this.x < 0) this.x = canvas.width;
+                    if (this.x > canvas.width) this.x = 0;
+                    if (this.y < 0) this.y = canvas.height;
+                    if (this.y > canvas.height) this.y = 0;
+                }
+
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.opacity})`;
+                    ctx.fill();
+                }
+            }
+
+            const count = Math.floor((canvas.width * canvas.height) / 10000);
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (const p of particles) {
+                    p.update();
+                    p.draw();
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initParticles();
+        });
+    </script>
+</body>
+
+</html>
