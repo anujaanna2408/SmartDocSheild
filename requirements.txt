@@ -14,3 +14,5 @@ numpy==1.26.4
 # Pin blis/thinc/spacy transitive deps to avoid source compilation
 thinc==8.2.5
 blis==0.7.11
+# Direct SpaCy model link for reliable installation
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl

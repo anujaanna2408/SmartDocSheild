@@ -4,6 +4,9 @@ import bcrypt
 import logging
 import io
 import re
+import json
+import tempfile
+import uuid
 from collections import Counter
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -11,13 +14,13 @@ from flask_cors import CORS
 try:
     import PyPDF2
     from docx import Document
-    import spacy
-    import nltk
-    from nltk.corpus import stopwords
-    from nltk.tokenize import word_tokenize, sent_tokenize
-    nlp = spacy.load("en_core_web_sm")
 except ImportError:
-    nlp = None
+    PyPDF2 = None
+    Document = None
+
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize, sent_tokenize
 
 # ─── Logging setup ───────────────────────────────────────────────
 logging.basicConfig(
@@ -34,17 +37,55 @@ CORS(app)
 # Check if running on Render
 IS_RENDER = os.environ.get('RENDER') == 'true'
 
-# Use the persistent disk mount path on Render, or local 'data' folder
-DATA_DIR = "/opt/render/project/src/data" if IS_RENDER else "data"
+# Use the persistent disk mount path on Render if available, else local 'data'
+_DATA_DIR_RENDER = "/opt/render/project/src/data"
+if IS_RENDER and os.path.exists(os.path.dirname(_DATA_DIR_RENDER)):
+    DATA_DIR = _DATA_DIR_RENDER
+else:
+    DATA_DIR = os.path.join(os.getcwd(), "data")
 
 if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+    except Exception as e:
+        log.error(f"Failed to create DATA_DIR {DATA_DIR}: {e}")
+        DATA_DIR = tempfile.gettempdir()
 
 DB_NAME = os.path.join(DATA_DIR, "smartdocshield_v2.db")
 UPLOAD_FOLDER = os.path.join(DATA_DIR, "uploads")
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# ─── Lazy-loading Singleton for SpaCy ────────────────────────────
+_nlp_model = None
+
+def get_nlp():
+    """Lazy-load SpaCy model to save memory during boot."""
+    global _nlp_model
+    if _nlp_model is None:
+        try:
+            import spacy
+            import nltk
+            # Ensure NLTK data is present
+            for resource in ["punkt", "punkt_tab", "stopwords"]:
+                try:
+                    nltk.data.find(f"tokenizers/{resource}" if "punkt" in resource else f"corpora/{resource}")
+                except LookupError:
+                    log.info(f"Downloading NLTK resource: {resource}")
+                    nltk.download(resource, quiet=True)
+            
+            try:
+                _nlp_model = spacy.load("en_core_web_sm")
+            except OSError:
+                log.info("Downloading SpaCy model 'en_core_web_sm'...")
+                import spacy.cli
+                spacy.cli.download("en_core_web_sm")
+                _nlp_model = spacy.load("en_core_web_sm")
+        except Exception as e:
+            log.error(f"Failed to initialize NLP: {e}")
+            _nlp_model = None
+    return _nlp_model
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -398,6 +439,7 @@ def extract_entities_structured(text):
     entities_flat = []
     entities_grouped = {}
 
+    nlp = get_nlp()
     if nlp is None:
         return entities_flat, entities_grouped
 
@@ -569,12 +611,20 @@ def api_upload():
         try:
             with open(file_path, "rb") as saved_file:
                 if filename.endswith(".pdf"):
+                    if PyPDF2 is None:
+                        throw_msg = "PDF processing library (PyPDF2) is not installed."
+                        log.error(throw_msg)
+                        raise ImportError(throw_msg)
                     reader = PyPDF2.PdfReader(saved_file)
                     for page in reader.pages:
                         extracted = page.extract_text()
                         if extracted:
                             text += extracted + "\n"
                 elif filename.endswith(".docx"):
+                    if Document is None:
+                        throw_msg = "DOCX processing library (python-docx) is not installed."
+                        log.error(throw_msg)
+                        raise ImportError(throw_msg)
                     doc = Document(saved_file)
                     for p in doc.paragraphs:
                         text += p.text + "\n"
